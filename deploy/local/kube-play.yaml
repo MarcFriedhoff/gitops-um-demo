@@ -1,0 +1,77 @@
+# Save the output of this file and use kubectl create -f to import
+# it into Kubernetes.
+#
+# Created with podman-5.0.3
+
+# NOTE: If you generated this yaml from an unprivileged and rootless podman container on an SELinux
+# enabled system, check the podman generate kube man page for steps to follow to ensure that your pod/container
+# has the right permissions to access the volumes added.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2024-06-28T09:56:52Z"
+  labels:
+    app: umservercontainer-pod
+  name: umservercontainer-pod
+spec:
+  containers:
+  - env:
+    - name: REALM_NAME
+      value: umtest
+    - name: INIT_JAVA_MEM_SIZE
+      value: "2048"
+    - name: STARTUP_COMMAND
+      value: runUMTool.sh CreateChannel -channelname=test -rname=nsp://localhost:9000
+    - name: MAX_DIRECT_MEM_SIZE
+      value: 3G
+    - name: MAX_JAVA_MEM_SIZE
+      value: "2048"
+    image: sagcr.azurecr.io/universalmessaging-server:10.15
+    name: umservercontainer
+    ports:
+    - containerPort: 9000
+      hostPort: 9000
+    - containerPort: 9200
+      hostPort: 9200
+    securityContext:
+      runAsNonRoot: true
+    volumeMounts:
+    - mountPath: /opt/softwareag/UniversalMessaging/server/umserver/licence/licence.xml
+      name: licensefile
+    - mountPath: /opt/softwareag/UniversalMessaging/server/umserver/data
+      name: umdata
+    - mountPath: /opt/softwareag/UniversalMessaging/server/umserver/logs
+      name: umlogs
+    - mountPath: /opt/softwareag/UniversalMessaging/server/umserver/conf
+      name: umconf
+  volumes:
+  - name: licensefile-pvc
+    persistentVolumeClaim: 
+      claimName: licensefile
+  - name: umdata-pvc
+    persistentVolumeClaim: 
+      claimName: umdata
+  - name: umlogs-pvc
+    persistentVolumeClaim: 
+      claimName: umlogs
+  - name: umconf-pvc
+    persistentVolumeClaim: 
+      claimName: umconf
+  - hostPath:
+      path: ${BASE_DIR}/licence.xml
+      type: File
+    name: licensefile
+  - hostPath:
+      path: ${BASE_DIR}/umserver/data
+      type: Directory
+    name: umdata
+  - hostPath:
+      path: ${BASE_DIR}/umserver/logs
+      type: Directory
+    name: umlogs
+  - hostPath:
+      path: ${BASE_DIR}/umserver/conf
+      type: Directory
+    name: umconf
+  

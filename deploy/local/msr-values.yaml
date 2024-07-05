@@ -1,0 +1,51 @@
+
+
+extraConfigMaps:
+  - name: msr-um-realm-config
+    data: 
+      channels.xml: |
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <NirvanaRealm name="umtest" exportDate="2024-06-28Z" comment="Realm configuration from umtest" version="10.15" buildInfo="10.15.0.18.1045">
+            <ChannelSet>
+                <ChannelEntry>
+                    <ChannelAttributesEntry name="newchannel" TTL="0" capacity="0" EID="0" jmsEngine="false" mergeEngine="false" type="MIXED_TYPE"/>
+                    <StorePropertiesEntry HonorCapacityWhenFull="true" SyncOnEachWrite="false" SyncMaxBatchSize="0" SyncBatchTime="0" PerformAutomaticMaintenance="true" EnableCaching="true" CacheOnReload="true" Priority="4" EnableMulticast="false" MultiFileEventsPerSpindle="50000" StampDictionary="0"/>
+                    <ChannelPermissionSet>
+                        <ChannelACLEntry listACLEntries="true" modifyACLEntries="true" fullControl="true" getLastEID="true" purgeEvents="true" subscribe="true" publish="true" useNamedSubcription="true" host="localhost" name="sagadmin"/>
+                        <ChannelGroupACLEntry listACLEntries="false" modifyACLEntries="false" fullControl="false" getLastEID="true" purgeEvents="false" subscribe="true" publish="false" useNamedSubcription="true" groupname="Everyone"/>
+                    </ChannelPermissionSet>
+                </ChannelEntry>
+            </ChannelSet>
+        </NirvanaRealm>
+
+jobs:
+- name: deploy-assets-to-um
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": hook-succeeded
+  image:
+    repository: sagcr.azurecr.io/universalmessaging-tools
+    tag: 10.15
+  imagePullPolicy: IfNotPresent
+  restartPolicy: Never
+  env:
+    # -- Environment variable for Shell script
+    - name:  UM_HOST
+      # -- Set UM Realm deployment (=hostname)
+      value: wm-realm-um
+  command: ["/bin/bash"]
+  # -- Shell script to deploy / create assets in UM using runUMTool.sh
+  args:
+    - -c
+    - >-
+        echo Deploying Assets in UM [$UM_HOST] ...;
+        runUMTool.sh CreateConnectionFactory -rname=nsp://$UM_HOST:9000 -factoryname=local_um -factorytype=default -connectionurl=nsp://$UM_HOST:9000 -durabletype=S
+  volumeMounts:
+    - name: msr-um-realm-config
+      mountPath: /mnt/um-realm-config
+      readOnly: true
+  volumes: 
+    - name: msr-um-realm-config
+      configMap:
+        name: msr-um-realm-config
